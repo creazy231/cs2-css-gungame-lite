@@ -15,6 +15,7 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     
     private string ModuleDisplayName => "GunGame Lite";
 
+    // TODO: Move this into the config
     private readonly string[] _weaponOrder = {
         "awp",
         "mag7",
@@ -59,6 +60,12 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     
     public GunGameLiteConfig Config { get; set; } = new();
     
+    private static GunGameLite? _instance;
+    public static GunGameLite? Instance
+    {
+        get { return _instance ??= new GunGameLite(); }
+    }
+    
     public void OnConfigParsed(GunGameLiteConfig config)
     {
         LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Loading config file");
@@ -72,6 +79,8 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     {
         LogHelper.LogToConsole(ConsoleColor.Green,
             $"[GunGame Lite Plugin] -> {ModuleName} version {ModuleVersion} loaded");
+        
+        Server.ExecuteCommand("mp_restartgame 1");
         
         LogHelper.LogToChatAll($"{Config.Tag}{Config.Colors.Highlight}{ModuleDisplayName} v{ModuleVersion} loaded!");
         RegisterListeners();
@@ -92,31 +101,15 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         RegisterEventHandler<EventPlayerDeath>(OnPlayerDeath);
         
         RegisterEventHandler<EventRoundStart>(OnRoundStart);
+        
+        RegisterEventHandler<EventWeaponFire>(OnWeaponFire);
+        
         RegisterEventHandler<EventRoundEnd>(OnRoundEnd);
     }
     
     private HookResult OnWarmup(EventRoundAnnounceWarmup @event, GameEventInfo info)
     {
         LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Warmup started");
-        
-        Server.ExecuteCommand("mp_respawn_on_death_ct 1");
-        Server.ExecuteCommand("mp_respawn_on_death_t 1");
-        Server.ExecuteCommand("mp_respawn_immunitytime 2");
-        Server.ExecuteCommand("mp_death_drop_gun 0");
-        Server.ExecuteCommand("mp_death_drop_grenade 0");
-        Server.ExecuteCommand("mp_death_drop_defuser 0");
-        Server.ExecuteCommand("mp_free_armor 2");
-        Server.ExecuteCommand("cash_player_killed_enemy_default 0");
-        Server.ExecuteCommand("cash_player_killed_enemy_factor 0");
-        Server.ExecuteCommand("cash_player_killed_teammate 0");
-        Server.ExecuteCommand("cash_player_killed_teammate_factor 0");
-        Server.ExecuteCommand("mp_maxmoney 0");
-        Server.ExecuteCommand("mp_startmoney 0");
-        Server.ExecuteCommand("contributionscore_suicide 0");
-        Server.ExecuteCommand("contributionscore_objective_kill 0");
-        Server.ExecuteCommand("contributionscore_kill 0");
-        Server.ExecuteCommand("contributionscore_assist 0");
-        Server.ExecuteCommand("mp_restartgame 1");
         
         return HookResult.Continue;
     }
@@ -152,7 +145,6 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         var player = @event.Userid;
         
         if (player == null || !player.IsValid) return HookResult.Continue;
-        player.PrintToCenterHtml($"<font color='#00FF00' size='80'>Someone won the game!</font>");
         
         GivePlayerCurrentWeapon(player);
         
@@ -161,6 +153,26 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     
     private HookResult OnRoundStart(EventRoundStart @event, GameEventInfo info)
     {
+        // TODO: Move this into a separate file and call it from here
+        Server.ExecuteCommand("mp_respawn_on_death_ct 1");
+        Server.ExecuteCommand("mp_respawn_on_death_t 1");
+        
+        Server.ExecuteCommand("mp_respawn_immunitytime 3");
+        Server.ExecuteCommand("mp_death_drop_gun 0");
+        Server.ExecuteCommand("mp_death_drop_grenade 0");
+        Server.ExecuteCommand("mp_death_drop_defuser 0");
+        Server.ExecuteCommand("mp_free_armor 2");
+        Server.ExecuteCommand("cash_player_killed_enemy_default 0");
+        Server.ExecuteCommand("cash_player_killed_enemy_factor 0");
+        Server.ExecuteCommand("cash_player_killed_teammate 0");
+        Server.ExecuteCommand("cash_player_killed_teammate_factor 0");
+        Server.ExecuteCommand("mp_maxmoney 0");
+        Server.ExecuteCommand("mp_startmoney 0");
+        Server.ExecuteCommand("contributionscore_suicide 0");
+        Server.ExecuteCommand("contributionscore_objective_kill 0");
+        Server.ExecuteCommand("contributionscore_kill 0");
+        Server.ExecuteCommand("contributionscore_assist 0");
+        
         _playerCurrentWeapon.Clear();
 
         var weaponEntities = Utilities.FindAllEntitiesByDesignerName<CWeaponBaseItem>("weapon_");
@@ -174,6 +186,7 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         
         foreach (var player in activePlayers.Where(player => player is { PawnIsAlive: true }))
         {
+            player.Score = 0;
             _playerCurrentWeapon[player] = "";
             GivePlayerNextWeapon(player);
         }
@@ -185,12 +198,6 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     {
         RoundActive = false;
         
-        var players = Utilities.GetPlayers();
-        foreach (var player in players)
-        {
-            player.PrintToCenterHtml($"<font color='#00FF00' size='80'>Someone won the game!</font>");
-        }
-        
         return HookResult.Continue;
     }
 
@@ -201,10 +208,14 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         var currentWeapon = _playerCurrentWeapon[player];
         LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Current weapon is {currentWeapon}");
         
-        player.RemoveWeapons();
-        player.GiveNamedItem("item_assaultsuit");
-        player.GiveNamedItem("weapon_knife");
-        player.GiveNamedItem($"weapon_{currentWeapon}");
+        // wait for next tick to give player current weapon
+        Instance?.AddTimer(0.1f, () =>
+        {
+            player.RemoveWeapons();
+            player.GiveNamedItem("item_assaultsuit");
+            player.GiveNamedItem("weapon_knife");
+            player.GiveNamedItem($"weapon_{currentWeapon}");
+        });
     }
     
     private void GivePlayerNextWeapon(CCSPlayerController player)
@@ -217,19 +228,11 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         var currentWeaponIndex = Array.IndexOf(_weaponOrder, currentWeapon);
         
         // check if currentWeaponIndex is + 1 is out of bounds. restart game if true
-        if (currentWeaponIndex + 1 >= 2) // _weaponOrder.Length
+        if (currentWeaponIndex + 1 >= _weaponOrder.Length)
         {
-            LogHelper.LogToChatAll($"{Config.Tag}{Config.Colors.Highlight}{player.PlayerName}{ChatColors.Default} won the game!");
+            LogHelper.LogToChatAll($"{Config.Tag}{Config.Colors.Highlight}{player.PlayerName}{ChatColors.Default} won the game! Announce winner...");
             
-            var gameRules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First().GameRules!;
-            gameRules.TerminateRound(10.0f, RoundEndReason.RoundDraw);
-            
-            // disable autorespawn
-            Server.ExecuteCommand("mp_respawn_on_death_ct 0");
-            Server.ExecuteCommand("mp_respawn_on_death_t 0");
-            
-            // restart game in 5 seconds
-            // Server.ExecuteCommand("mp_restartgame 5");
+            AnnounceWinner(player);
             
             return;
         }
@@ -239,11 +242,21 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Giving player {player.PlayerName} next weapon: {nextWeapon}");
         
         player.PawnArmor = 100;
-        player.Pawn.Value.Health = 100;
         player.RemoveWeapons();
         player.GiveNamedItem("item_assaultsuit");
-        player.GiveNamedItem("weapon_knife");
-        player.GiveNamedItem($"weapon_{nextWeapon}");
+        
+        if (nextWeapon == "knife")
+        {
+            // player.GiveNamedItem("weapon_knifegg");
+            player.GiveNamedItem("weapon_knife");
+            // TODO: Announce that player has knife and is about to win in chat to all players
+        }
+        else
+        {
+            player.GiveNamedItem("weapon_knife");
+            player.GiveNamedItem($"weapon_{nextWeapon}");
+        }
+        
         _playerCurrentWeapon[player] = nextWeapon;
     }
 
@@ -253,12 +266,72 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         var attacker = @event.Attacker;
         
         if (player == null || attacker == null) return HookResult.Continue;
+        
         LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Someone died. {player.PlayerName} was killed by {attacker.PlayerName}");
+        
         if (player.UserId == attacker.UserId) return HookResult.Continue;
         
         attacker.Score++;
+        
+        // Announce players name with most Score in chat to all players. use name and score
+        // TODO: Move this into a separate function and store the highest score and player in a variable
+        // TODO: Also call out "has taken the lead" if the player has more score than the previous highest score
+        var activePlayers = Utilities.GetPlayers();
+        var highestScore = 0;
+        var highestScorePlayer = "";
+        foreach (var activePlayer in activePlayers.Where(activePlayer => activePlayer.Score > highestScore))
+        {
+            highestScore = activePlayer.Score;
+            highestScorePlayer = activePlayer.PlayerName;
+        }
+        
+        LogHelper.LogToChatAll($"{Config.Tag}{Config.Colors.Highlight}{highestScorePlayer}{ChatColors.Default} is leading with {Config.Colors.Highlight}{highestScore}{ChatColors.Default} kills!");
+        
         GivePlayerNextWeapon(attacker);
         
         return HookResult.Continue;
+    }
+    
+    private HookResult OnWeaponFire(EventWeaponFire @event, GameEventInfo info)
+    {
+        LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Weapon fired");
+        
+        var player = @event.Userid;
+        
+        if (player == null || !player.PawnIsAlive) return HookResult.Continue;
+        
+        var currentWeapon = _playerCurrentWeapon[player];
+        
+        if (currentWeapon == "hegrenade")
+        {
+            Instance?.AddTimer(5.0f, () =>
+            {
+                GivePlayerCurrentWeapon(player);
+            });
+        }
+        
+        return HookResult.Continue;
+    }
+    
+    private void AnnounceWinner(CCSPlayerController winner)
+    {
+        LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Announcing winner");
+        
+        RoundActive = false;
+        
+        var gameRules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First().GameRules!;
+        gameRules.TerminateRound(10.0f, RoundEndReason.RoundDraw);
+        
+        // Abort Round
+        
+        Server.ExecuteCommand("mp_respawn_on_death_ct 0");
+        Server.ExecuteCommand("mp_respawn_on_death_t 0");
+        
+        var activePlayers = Utilities.GetPlayers();
+        foreach (var activePlayer in activePlayers)
+        {
+            activePlayer.RemoveWeapons();
+            PrintHelper.PlayerCenterHtml(activePlayer, $"<font class='fontSize-m' color='white'>Winner Winner Chicken Dinner</font><br><font class='fontSize-l' color='#2E9F65'>{winner.PlayerName}</font>", 5);
+        }
     }
 }
