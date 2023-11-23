@@ -27,3 +27,7 @@ public static void RepeatFor(float duration, float delay, Action action)
   MyPlugin.Instance.AddTimer(delay, () => RepeatFor(duration - delay, delay, action));
 }
 ```
+
+## TODO
+- https://github.com/PhantomYopta/LiteMapChooser
+- 
