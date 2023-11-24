@@ -16,22 +16,19 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     
     private static string ModuleDisplayName => "GunGame Lite";
     
-    // TODO: -1 Score and Weapon on killed with knife
+    // TODO: -1 Score and Weapon on killed with knife or killed themselves
     // TODO: Reset Assists, Kills, Deaths, MVPs, Score on round start
     // TODO: BUG: When round is done, Players stay on old weapons for some reason.
     // TODO: Add Bot Support using config and add / remove bots based on player count
     // TODO: Implement custom spawn protection based on https://github.com/Hackmastr/css-spawn-protection/blob/main/CTSpawnProtection.cs#L12
+    // TODO: Implement logic to automatically restock ammo after reload
     
     // Config
     public GunGameLiteConfig Config { get; set; } = new();
     
     
     // Plugin Instance
-    private static GunGameLite? _instance;
-    public static GunGameLite? Instance
-    {
-        get { return _instance ??= new GunGameLite(); }
-    }
+    public static GunGameLite? Instance { get; private set; }
     
     // Variables
     private readonly Dictionary<CCSPlayerController, string> _playerCurrentWeapon = new();
@@ -50,6 +47,8 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     {
         LogHelper.LogToConsole(ConsoleColor.Green,
             $"[GunGame Lite Plugin] -> {ModuleName} version {ModuleVersion} loaded");
+        
+        Instance = this;
         
         GunGameLiteServerConfig.LoadServerConfig();
         Server.ExecuteCommand("mp_restartgame 1");
@@ -238,15 +237,33 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         
         if (player == null || attacker == null) return HookResult.Continue;
         
-        LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Someone died. {player.PlayerName} was killed by {attacker.PlayerName}");
+        // Check if the player was killed by a knife or killed themselves
+        if (@event.Weapon == "worldent" || @event.Weapon == "knife")
+        {
+            // Decrease the player's score by 1
+            player.Score--;
+
+            // Move the player back one weapon in the weapon order
+            var currentWeapon = _playerCurrentWeapon[player];
+            var currentWeaponIndex = Array.IndexOf(Config.WeaponOrder, currentWeapon);
+            if (currentWeaponIndex > 0)
+            {
+                var previousWeapon = Config.WeaponOrder[currentWeaponIndex - 1];
+                _playerCurrentWeapon[player] = previousWeapon;
+                
+                // Announce in chat that the player has been demoted and also announce the reason therefor
+                LogHelper.LogToChatAll($"{Config.Tag}{ChatColors.Gold}{player.PlayerName}{ChatColors.Darkred} has been demoted!");
+            }
+        }
         
-        if (player.UserId == attacker.UserId) return HookResult.Continue;
-        
+        if (!attacker.IsValid) return HookResult.Continue;
         attacker.Score++;
-        
-        AnnouncePlayerWithMostScore();
         GivePlayerNextWeapon(attacker);
         
+        LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Someone died. {player.PlayerName} was killed by {attacker.PlayerName}");
+
+        AnnouncePlayerWithMostScore();
+
         return HookResult.Continue;
     }
     
@@ -276,6 +293,9 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         
         var gameRules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First().GameRules!;
         gameRules.TerminateRound(10.0f, RoundEndReason.RoundDraw);
+        
+        // EventGameEnd endGameEvent = new EventGameEnd (true);
+        // endGameEvent.FireEvent(false);
         
         // Abort Round
         
