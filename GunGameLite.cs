@@ -3,6 +3,7 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Entities.Constants;
 using CounterStrikeSharp.API.Modules.Utils;
+using GunGameLite.Extensions;
 
 namespace GunGameLite;
 
@@ -16,12 +17,10 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     
     private static string ModuleDisplayName => "GunGame Lite";
     
-    // TODO: -1 Score and Weapon on killed with knife or killed themselves
-    // TODO: Reset Assists, Kills, Deaths, MVPs, Score on round start
-    // TODO: BUG: When round is done, Players stay on old weapons for some reason.
+    // TODO: Reset Assists, Kills, Deaths, MVPs on round start
+    // -> TODO: BUG: When round is done, Players stay on old weapons for some reason.
     // TODO: Add Bot Support using config and add / remove bots based on player count
     // TODO: Implement custom spawn protection based on https://github.com/Hackmastr/css-spawn-protection/blob/main/CTSpawnProtection.cs#L12
-    // TODO: Implement logic to automatically restock ammo after reload
     
     // Config
     public GunGameLiteConfig Config { get; set; } = new();
@@ -78,6 +77,9 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         RegisterEventHandler<EventWeaponFire>(OnWeaponFire);
         
         RegisterEventHandler<EventRoundEnd>(OnRoundEnd);
+        
+        RegisterEventHandler<EventPlayerDisconnect>(OnPlayerDisconnect);
+        RegisterEventHandler<EventWeaponReload>(OnWeaponReload);
     }
     
     private HookResult OnWarmup(EventRoundAnnounceWarmup @event, GameEventInfo info)
@@ -159,8 +161,9 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         foreach (var player in activePlayers.Where(player => player is { PawnIsAlive: true }))
         {
             player.Score = 0;
-            _playerCurrentWeapon[player] = "";
-            GivePlayerNextWeapon(player);
+
+            // Initialize player for the new round
+            InitializePlayer(player);
         }
         
         return HookResult.Continue;
@@ -168,6 +171,8 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     
     private HookResult OnRoundEnd(EventRoundEnd @event, GameEventInfo info)
     {
+        _playerCurrentWeapon.Clear();
+        
         return HookResult.Continue;
     }
 
@@ -343,4 +348,27 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     }
 
     #endregion
+    
+    private HookResult OnWeaponReload(EventWeaponReload @event, GameEventInfo info)
+    {
+        var player = @event.Userid;
+
+        if (player == null || !player.IsValid || !player.PawnIsAlive) return HookResult.Continue;
+        
+        LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Player {player.PlayerName} reloaded");
+
+        // Restock player's ammo
+        var activeWeapon = ActiveWeapon(player);
+        if (activeWeapon == null) return HookResult.Continue;
+        activeWeapon.Clip1 = 250;
+        activeWeapon.ReserveAmmo[0] = 250;
+
+        return HookResult.Continue;
+    }
+
+    private static CBasePlayerWeapon? ActiveWeapon(CCSPlayerController player)
+    {
+        var weaponServices = player.PlayerPawn.Value.WeaponServices;
+        return weaponServices?.ActiveWeapon.GetValueOrNull();
+    }
 }
