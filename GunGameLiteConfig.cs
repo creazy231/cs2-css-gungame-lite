@@ -5,19 +5,39 @@ namespace GunGameLite;
 
 public class Colors
 {
-    [JsonPropertyName("Highlight")]
-    public string Highlight { get; set; } = "{PURPLE}";
+    [JsonPropertyName("Highlight")] public string Highlight { get; set; } = "{PURPLE}";
+}
+
+public class Bots
+{
+    /// <summary>
+    /// If bots should be enabled.
+    /// </summary>
+    [JsonPropertyName("Enabled")]
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// The amount of bots to spawn.
+    /// </summary>
+    [JsonPropertyName("Quota")]
+    public int Quota { get; set; } = 4;
+
+    /// <summary>
+    /// The difficulty of the bots. Can be 0, 1, 2 or 3.
+    /// </summary>
+    [JsonPropertyName("Difficulty")]
+    public int Difficulty { get; set; } = 3;
 }
 
 public class GunGameLiteConfig : BasePluginConfig
 {
     public override int Version => 1;
 
-    [JsonPropertyName("Tag")]
-    public string Tag { get; set; } = "{DEFAULT}[{PURPLE}GGL{DEFAULT}]{DEFAULT} ";
+    [JsonPropertyName("Tag")] public string Tag { get; set; } = "{DEFAULT}[{PURPLE}GGL{DEFAULT}]{DEFAULT} ";
 
-    [JsonPropertyName("Colors")]
-    public Colors Colors { get; set; } = new Colors();
+    [JsonPropertyName("Colors")] public Colors Colors { get; set; } = new Colors();
+
+    [JsonPropertyName("Bots")] public Bots Bots { get; set; } = new Bots();
 
     [JsonPropertyName("WeaponOrder")]
     public string[] WeaponOrder { get; set; } =

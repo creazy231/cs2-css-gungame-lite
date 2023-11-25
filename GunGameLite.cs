@@ -19,7 +19,7 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     
     // TODO: Reset Assists, Kills, Deaths, MVPs on round start
     // -> TODO: BUG: When round is done, Players stay on old weapons for some reason.
-    // TODO: Add Bot Support using config and add / remove bots based on player count
+    // TODO: Bug: If quota is > 6, the bots will be kicked and spawned again.
     // TODO: Implement custom spawn protection based on https://github.com/Hackmastr/css-spawn-protection/blob/main/CTSpawnProtection.cs#L12
     
     // Config
@@ -38,6 +38,16 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Loading config file");
 
         Config = config;
+        if (config.Bots.Enabled)
+        {
+            Server.ExecuteCommand("mp_autoteambalance 0");
+            Server.ExecuteCommand("mp_limitteams 0");
+            
+            Server.ExecuteCommand($"bot_kick all");
+            Server.ExecuteCommand($"bot_quota 0");
+            Server.ExecuteCommand($"bot_quota_mode normal");
+            Server.ExecuteCommand($"bot_difficulty {config.Bots.Difficulty}");
+        }
         
         LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Config file loaded");
     }
@@ -115,10 +125,12 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         
         if (_playerCurrentWeapon.ContainsKey(player))
         {
+            player.Score = 0;
             _playerCurrentWeapon[player] = "";
         }
         else
         {
+            player.Score = 0;
             _playerCurrentWeapon.TryAdd(player, "");
         }
         
@@ -166,6 +178,8 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
             InitializePlayer(player);
         }
         
+        BotManager.SpawnBots();
+        
         return HookResult.Continue;
     }
     
@@ -180,7 +194,8 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     {
         LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Giving player {player.PlayerName} current weapon");
         
-        var currentWeapon = _playerCurrentWeapon[player];
+        // try to get current weapon from dictionary
+        if (!_playerCurrentWeapon.TryGetValue(player, out var currentWeapon)) return;
         LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Current weapon is {currentWeapon}");
         
         // wait for next tick to give player current weapon
@@ -261,6 +276,8 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
             }
         }
         
+        BotManager.SpawnBots();
+        
         if (!attacker.IsValid) return HookResult.Continue;
         attacker.Score++;
         GivePlayerNextWeapon(attacker);
@@ -337,19 +354,20 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     #region Events
 
     [GameEventHandler(HookMode.Post)]
-    public HookResult OnPlayerDisconnect(EventPlayerDisconnect @event, GameEventInfo _)
+    private HookResult OnPlayerDisconnect(EventPlayerDisconnect @event, GameEventInfo _)
     {
         var player = @event.Userid;
         if (player == null) return HookResult.Continue;
         
         _playerCurrentWeapon.Remove(player);
+        // if (!player.IsBot) BotManager.SpawnBots();
         
         return HookResult.Continue;
     }
 
     #endregion
     
-    private HookResult OnWeaponReload(EventWeaponReload @event, GameEventInfo info)
+    private static HookResult OnWeaponReload(EventWeaponReload @event, GameEventInfo info)
     {
         var player = @event.Userid;
 
@@ -358,17 +376,11 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Player {player.PlayerName} reloaded");
 
         // Restock player's ammo
-        var activeWeapon = ActiveWeapon(player);
+        var activeWeapon = player.ActiveWeapon();
         if (activeWeapon == null) return HookResult.Continue;
         activeWeapon.Clip1 = 250;
         activeWeapon.ReserveAmmo[0] = 250;
 
         return HookResult.Continue;
-    }
-
-    private static CBasePlayerWeapon? ActiveWeapon(CCSPlayerController player)
-    {
-        var weaponServices = player.PlayerPawn.Value.WeaponServices;
-        return weaponServices?.ActiveWeapon.GetValueOrNull();
     }
 }

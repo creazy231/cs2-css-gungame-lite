@@ -10,6 +10,7 @@ namespace GunGameLite
             Server.ExecuteCommand("mp_respawn_on_death_t 1");
         
             Server.ExecuteCommand("bot_chatter off");
+            Server.ExecuteCommand("bot_join_after_player 0");
             
             Server.ExecuteCommand("mp_respawn_immunitytime 5");
             Server.ExecuteCommand("mp_death_drop_gun 0");
