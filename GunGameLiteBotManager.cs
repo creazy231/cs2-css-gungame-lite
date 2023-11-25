@@ -40,16 +40,16 @@ public class BotManager
         
         while (totalPlayersOnTSide < GunGameLite.Instance.Config.Bots.QuotaPerTeam)
         {
-            Server.ExecuteCommand("bot_add t");
             LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Spawning bot on T side since there are {totalPlayersOnTSide} players on T side");
+            Server.ExecuteCommand("bot_add t");
             totalPlayersOnTSide++;
             botsOnTSide++;
         }
         
-        while (totalPlayersOnCtSide < 3)
+        while (totalPlayersOnCtSide < GunGameLite.Instance.Config.Bots.QuotaPerTeam)
         {
-            Server.ExecuteCommand("bot_add ct");
             LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Spawning bot on CT side since there are {totalPlayersOnCtSide} players on CT side");
+            Server.ExecuteCommand("bot_add ct");
             totalPlayersOnCtSide++;
             botsOnCtSide++;
         }
@@ -60,8 +60,8 @@ public class BotManager
             var bot = players.FirstOrDefault(player => player.IsBot && player.IsTerrorist());
             if (bot == null) break;
             
-            Server.ExecuteCommand("bot_kick t");
             LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Kicking bot on T side");
+            Server.ExecuteCommand("bot_kick t");
             botsOnTSide--;
             totalPlayersOnTSide--;
         }
@@ -71,8 +71,8 @@ public class BotManager
             var bot = players.FirstOrDefault(player => player.IsBot && player.IsCounterTerrorist());
             if (bot == null) break;
             
-            Server.ExecuteCommand("bot_kick ct");
             LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Kicking bot on CT side");
+            Server.ExecuteCommand("bot_kick ct");
             botsOnCtSide--;
             totalPlayersOnCtSide--;
         }
