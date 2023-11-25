@@ -43,9 +43,6 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
             Server.ExecuteCommand("mp_autoteambalance 0");
             Server.ExecuteCommand("mp_limitteams 0");
             
-            Server.ExecuteCommand($"bot_kick all");
-            Server.ExecuteCommand($"bot_quota 0");
-            Server.ExecuteCommand($"bot_quota_mode normal");
             Server.ExecuteCommand($"bot_difficulty {config.Bots.Difficulty}");
         }
         
@@ -158,6 +155,7 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     private HookResult OnRoundStart(EventRoundStart @event, GameEventInfo info)
     {
         GunGameLiteServerConfig.LoadServerConfig();
+        Server.ExecuteCommand("bot_kick all");
         
         _playerCurrentWeapon.Clear();
 
@@ -178,7 +176,8 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
             InitializePlayer(player);
         }
         
-        BotManager.SpawnBots();
+        // await for some time
+        Instance?.AddTimer(0.1f, BotManager.SpawnBots);
         
         return HookResult.Continue;
     }
@@ -276,7 +275,7 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
             }
         }
         
-        BotManager.SpawnBots();
+        if (!player.IsBot) BotManager.SpawnBots();
         
         if (!attacker.IsValid) return HookResult.Continue;
         attacker.Score++;

@@ -8,7 +8,8 @@ namespace GunGameLite
         {
             Server.ExecuteCommand("mp_respawn_on_death_ct 1");
             Server.ExecuteCommand("mp_respawn_on_death_t 1");
-        
+            
+            Server.ExecuteCommand("bot_quota_mode fill");
             Server.ExecuteCommand("bot_chatter off");
             Server.ExecuteCommand("bot_join_after_player 0");
             

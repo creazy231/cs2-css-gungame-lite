@@ -8,12 +8,12 @@ namespace GunGameLite.Extensions
         {
             if (player == null || !player.IsValid || !player.PlayerPawn.IsValid)
             {
-                LogHelper.LogToConsole(ConsoleColor.Red, "IsAlive:ER - InvalidPlayer");
+                // LogHelper.LogToConsole(ConsoleColor.Red, "IsAlive:ER - InvalidPlayer");
                 return false;
             }
 
             var isAlive = player.PlayerPawn.Value.LifeState == 0;
-            LogHelper.LogToConsole(ConsoleColor.Green, $"IsAlive - {player.PlayerName} isAlive? {isAlive}");
+            // LogHelper.LogToConsole(ConsoleColor.Green, $"IsAlive - {player.PlayerName} isAlive? {isAlive}");
             return isAlive;
         }
 
@@ -21,12 +21,12 @@ namespace GunGameLite.Extensions
         {
             if (player == null || !player.IsValid || !player.PlayerPawn.IsValid)
             {
-                LogHelper.LogToConsole(ConsoleColor.Red, "IsDying:ER - InvalidPlayer");
+                // LogHelper.LogToConsole(ConsoleColor.Red, "IsDying:ER - InvalidPlayer");
                 return false;
             }
 
             var isDying = player.PlayerPawn.Value.LifeState == 1;
-            LogHelper.LogToConsole(ConsoleColor.Green, $"IsDying - {player.PlayerName} isDying? {isDying}");
+            // LogHelper.LogToConsole(ConsoleColor.Green, $"IsDying - {player.PlayerName} isDying? {isDying}");
             return isDying;
         }
 
@@ -34,12 +34,12 @@ namespace GunGameLite.Extensions
         {
             if (player == null || !player.IsValid || !player.PlayerPawn.IsValid)
             {
-                LogHelper.LogToConsole(ConsoleColor.Red, "IsDead:ER - InvalidPlayer");
+                // LogHelper.LogToConsole(ConsoleColor.Red, "IsDead:ER - InvalidPlayer");
                 return false;
             }
 
             var isDead = player.PlayerPawn.Value.LifeState == 2;
-            LogHelper.LogToConsole(ConsoleColor.Green, $"IsDead - {player.PlayerName} isDead? {isDead}");
+            // LogHelper.LogToConsole(ConsoleColor.Green, $"IsDead - {player.PlayerName} isDead? {isDead}");
             return isDead;
         }
 
@@ -48,12 +48,12 @@ namespace GunGameLite.Extensions
         {
             if (player == null || !player.IsValid || !player.PlayerPawn.IsValid)
             {
-                LogHelper.LogToConsole(ConsoleColor.Red, "IsTerrorist:ER - InvalidPlayer");
+                // LogHelper.LogToConsole(ConsoleColor.Red, "IsTerrorist:ER - InvalidPlayer");
                 return false;
             }
 
             var isTerrorist = player.PlayerPawn.Value.TeamNum == 2;
-            LogHelper.LogToConsole(ConsoleColor.Green, $"IsTerrorist - {player.PlayerName} isTerrorist? {isTerrorist}");
+            // LogHelper.LogToConsole(ConsoleColor.Green, $"IsTerrorist - {player.PlayerName} isTerrorist? {isTerrorist}");
             return isTerrorist;
         }
 
@@ -61,13 +61,12 @@ namespace GunGameLite.Extensions
         {
             if (player == null || !player.IsValid || !player.PlayerPawn.IsValid)
             {
-                LogHelper.LogToConsole(ConsoleColor.Red, "IsCounterTerrorist:ER - InvalidPlayer");
+                // LogHelper.LogToConsole(ConsoleColor.Red, "IsCounterTerrorist:ER - InvalidPlayer");
                 return false;
             }
 
             var isCounterTerrorist = player.PlayerPawn.Value.TeamNum == 3;
-            LogHelper.LogToConsole(ConsoleColor.Green,
-                $"IsCounterTerrorist - {player.PlayerName} isCounterTerrorist? {isCounterTerrorist}");
+            // LogHelper.LogToConsole(ConsoleColor.Green, $"IsCounterTerrorist - {player.PlayerName} isCounterTerrorist? {isCounterTerrorist}");
             return isCounterTerrorist;
         }
 

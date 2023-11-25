@@ -9,7 +9,6 @@ public class BotManager
     public static void SpawnBots()
     {
         if (!GunGameLite.Instance!.Config.Bots.Enabled) return;
-        Server.ExecuteCommand($"bot_quota 4");
         
         var totalPlayersOnTSide = 0;
         var totalPlayersOnCtSide = 0;
@@ -39,7 +38,7 @@ public class BotManager
         
         LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Spawning bots. T: {totalPlayersOnTSide} CT: {totalPlayersOnCtSide}");
         
-        while (totalPlayersOnTSide < 2)
+        while (totalPlayersOnTSide < GunGameLite.Instance.Config.Bots.QuotaPerTeam)
         {
             Server.ExecuteCommand("bot_add t");
             LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Spawning bot on T side since there are {totalPlayersOnTSide} players on T side");
@@ -47,7 +46,7 @@ public class BotManager
             botsOnTSide++;
         }
         
-        while (totalPlayersOnCtSide < 2)
+        while (totalPlayersOnCtSide < 3)
         {
             Server.ExecuteCommand("bot_add ct");
             LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Spawning bot on CT side since there are {totalPlayersOnCtSide} players on CT side");
@@ -56,7 +55,7 @@ public class BotManager
         }
         
         // kick bots if there are too many
-        while (botsOnTSide > 0 && totalPlayersOnTSide > 2)
+        while (botsOnTSide > 0 && totalPlayersOnTSide > GunGameLite.Instance.Config.Bots.QuotaPerTeam)
         {
             var bot = players.FirstOrDefault(player => player.IsBot && player.IsTerrorist());
             if (bot == null) break;
@@ -67,7 +66,7 @@ public class BotManager
             totalPlayersOnTSide--;
         }
         
-        while (botsOnCtSide > 0 && totalPlayersOnCtSide > 2)
+        while (botsOnCtSide > 0 && totalPlayersOnCtSide > GunGameLite.Instance.Config.Bots.QuotaPerTeam)
         {
             var bot = players.FirstOrDefault(player => player.IsBot && player.IsCounterTerrorist());
             if (bot == null) break;

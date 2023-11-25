@@ -17,10 +17,10 @@ public class Bots
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// The amount of bots to spawn.
+    /// The amount of bots to spawn per team.
     /// </summary>
-    [JsonPropertyName("Quota")]
-    public int Quota { get; set; } = 4;
+    [JsonPropertyName("QuotaPerTeam")]
+    public int QuotaPerTeam { get; set; } = 2;
 
     /// <summary>
     /// The difficulty of the bots. Can be 0, 1, 2 or 3.
