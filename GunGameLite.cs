@@ -103,6 +103,10 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         
         InitializePlayer(@event.Userid);
         
+        var activePlayers = Utilities.GetPlayers();
+        var realPlayers = activePlayers.Where(p => p is { IsValid: true });
+        if (realPlayers.Count() == 1 && Config.Bots.Enabled) Server.ExecuteCommand("mp_restartgame 1");
+        
         return HookResult.Continue;
     }
     
