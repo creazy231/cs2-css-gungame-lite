@@ -1,6 +1,8 @@
 ﻿using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
+using CounterStrikeSharp.API.Modules.Admin;
+using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Entities.Constants;
 using CounterStrikeSharp.API.Modules.Utils;
 using GunGameLite.Extensions;
@@ -18,8 +20,6 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     private static string ModuleDisplayName => "GunGame Lite";
     
     // TODO: Reset Assists, Kills, Deaths, MVPs on round start
-    // -> TODO: BUG: When round is done, Players stay on old weapons for some reason.
-    // TODO: Bug: If quota is > 6, the bots will be kicked and spawned again.
     // TODO: Implement custom spawn protection based on https://github.com/Hackmastr/css-spawn-protection/blob/main/CTSpawnProtection.cs#L12
     
     // Config
@@ -385,5 +385,40 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         activeWeapon.ReserveAmmo[0] = 250;
 
         return HookResult.Continue;
+    }
+    
+    // Commands
+    [RequiresPermissions("@css/root")]
+    [ConsoleCommand("ggl_rr", "Restarts the round")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+    public void OnRestartRoundCommand(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null) return;
+        Server.ExecuteCommand("mp_restartgame 1");
+        LogHelper.LogToChatAll($"{Config.Tag}{Config.Colors.Highlight}{caller.PlayerName}{ChatColors.Default} has restarted the round!");
+    }
+    
+    [RequiresPermissions("@css/root")]
+    [ConsoleCommand("ggl_bots", "Toggles bots")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+    public void OnToggleBotsCommand(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null) return;
+        
+        Config.Bots.Enabled = !Config.Bots.Enabled;
+        LogHelper.LogToChatAll($"{Config.Tag}{Config.Colors.Highlight}{caller.PlayerName}{ChatColors.Default} has toggled bots to {Config.Bots.Enabled}!");
+        Server.ExecuteCommand("mp_restartgame 1");
+    }
+    
+    [RequiresPermissions("@css/root")]
+    [ConsoleCommand("ggl_rl", "Reloads the plugin")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+    public void OnReloadPluginCommand(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null) return;
+        
+        Server.ExecuteCommand("css_plugins reload GunGameLite");
+        
+        LogHelper.LogToChatAll($"{Config.Tag}{Config.Colors.Highlight}{caller.PlayerName}{ChatColors.Default} has reloaded the plugin!");
     }
 }
