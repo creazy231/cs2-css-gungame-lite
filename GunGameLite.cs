@@ -15,7 +15,7 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     public override string ModuleName => "GunGameLite";
     public override string ModuleDescription =>
         "GunGame Lite is a simple and basic GunGame Plugin for CounterStrikeSharp";
-    public override string ModuleVersion => "0.0.1";
+    public override string ModuleVersion => "0.0.7";
     
     private static string ModuleDisplayName => "GunGame Lite";
     
