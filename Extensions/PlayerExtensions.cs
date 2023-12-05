@@ -12,7 +12,7 @@ namespace GunGameLite.Extensions
                 return false;
             }
 
-            var isAlive = player.PlayerPawn.Value.LifeState == 0;
+            var isAlive = player.PlayerPawn.Value != null && player.PlayerPawn.Value.LifeState == 0;
             // LogHelper.LogToConsole(ConsoleColor.Green, $"IsAlive - {player.PlayerName} isAlive? {isAlive}");
             return isAlive;
         }
@@ -25,7 +25,7 @@ namespace GunGameLite.Extensions
                 return false;
             }
 
-            var isDying = player.PlayerPawn.Value.LifeState == 1;
+            var isDying = player.PlayerPawn.Value != null && player.PlayerPawn.Value.LifeState == 1;
             // LogHelper.LogToConsole(ConsoleColor.Green, $"IsDying - {player.PlayerName} isDying? {isDying}");
             return isDying;
         }
@@ -38,12 +38,11 @@ namespace GunGameLite.Extensions
                 return false;
             }
 
-            var isDead = player.PlayerPawn.Value.LifeState == 2;
+            var isDead = player.PlayerPawn.Value != null && player.PlayerPawn.Value.LifeState == 2;
             // LogHelper.LogToConsole(ConsoleColor.Green, $"IsDead - {player.PlayerName} isDead? {isDead}");
             return isDead;
         }
-
-
+        
         public static bool IsTerrorist(this CCSPlayerController? player)
         {
             if (player == null || !player.IsValid || !player.PlayerPawn.IsValid)
@@ -52,11 +51,11 @@ namespace GunGameLite.Extensions
                 return false;
             }
 
-            var isTerrorist = player.PlayerPawn.Value.TeamNum == 2;
+            var isTerrorist = player.PlayerPawn.Value != null && player.PlayerPawn.Value.TeamNum == 2;
             // LogHelper.LogToConsole(ConsoleColor.Green, $"IsTerrorist - {player.PlayerName} isTerrorist? {isTerrorist}");
             return isTerrorist;
         }
-
+        
         public static bool IsCounterTerrorist(this CCSPlayerController? player)
         {
             if (player == null || !player.IsValid || !player.PlayerPawn.IsValid)
@@ -65,7 +64,7 @@ namespace GunGameLite.Extensions
                 return false;
             }
 
-            var isCounterTerrorist = player.PlayerPawn.Value.TeamNum == 3;
+            var isCounterTerrorist = player.PlayerPawn.Value != null && player.PlayerPawn.Value.TeamNum == 3;
             // LogHelper.LogToConsole(ConsoleColor.Green, $"IsCounterTerrorist - {player.PlayerName} isCounterTerrorist? {isCounterTerrorist}");
             return isCounterTerrorist;
         }
@@ -78,7 +77,7 @@ namespace GunGameLite.Extensions
         public static CBasePlayerWeapon? ActiveWeapon(this CCSPlayerController player)
         {
             if (!player.IsOnATeam()) return null;
-            var weaponServices = player.PlayerPawn.Value.WeaponServices;
+            var weaponServices = player.PlayerPawn.Value?.WeaponServices;
             return weaponServices?.ActiveWeapon.GetValueOrNull();
         }
     }

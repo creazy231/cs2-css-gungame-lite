@@ -103,15 +103,18 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         
         InitializePlayer(@event.Userid);
         
-        var activePlayers = Utilities.GetPlayers();
-        var realPlayers = activePlayers.Where(p => p is { IsValid: true });
-        if (realPlayers.Count() == 1 && Config.Bots.Enabled) Server.ExecuteCommand("mp_restartgame 1");
+        // var activePlayers = Utilities.GetPlayers();
+        // var realPlayers = activePlayers.Where(p => p is { IsValid: true, IsBot: false });
+        // LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Real Player joined. Restarting game if there is only one real player.");
+        // // if (realPlayers.Count() == 1 && Config.Bots.Enabled) Server.ExecuteCommand("mp_restartgame 1");
         
         return HookResult.Continue;
     }
     
     private HookResult OnPlayerSpawned(EventPlayerSpawn @event, GameEventInfo info)
     {
+        LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Player spawned");
+        
         var player = @event.Userid;
         if (player == null || !player.IsValid || !player.PawnIsAlive) return HookResult.Continue;
         
@@ -122,8 +125,6 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
 
     private void InitializePlayer(CCSPlayerController player)
     {
-        LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Player spawned");
-        
         if (_playerCurrentWeapon.ContainsKey(player))
         {
             player.Score = 0;
@@ -180,7 +181,6 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
             InitializePlayer(player);
         }
         
-        // await for some time
         Instance?.AddTimer(0.1f, BotManager.SpawnBots);
         
         return HookResult.Continue;
@@ -279,7 +279,7 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
             }
         }
         
-        if (!player.IsBot) BotManager.SpawnBots();
+        Instance?.AddTimer(0.1f, BotManager.SpawnBots);
         
         if (!attacker.IsValid) return HookResult.Continue;
         attacker.Score++;
@@ -316,16 +316,11 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     {
         LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Announcing winner");
         
-        var gameRules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First().GameRules!;
-        gameRules.TerminateRound(10.0f, RoundEndReason.RoundDraw);
-        
-        // EventGameEnd endGameEvent = new EventGameEnd (true);
-        // endGameEvent.FireEvent(false);
-        
-        // Abort Round
-        
         Server.ExecuteCommand("mp_respawn_on_death_ct 0");
         Server.ExecuteCommand("mp_respawn_on_death_t 0");
+        
+        var gameRules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First().GameRules!;
+        gameRules.TerminateRound(10.0f, RoundEndReason.RoundDraw);
         
         var activePlayers = Utilities.GetPlayers();
         foreach (var activePlayer in activePlayers)
@@ -363,7 +358,7 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         if (player == null) return HookResult.Continue;
         
         _playerCurrentWeapon.Remove(player);
-        // if (!player.IsBot) BotManager.SpawnBots();
+        if (!player.IsBot) Instance?.AddTimer(0.1f, BotManager.SpawnBots);
         
         return HookResult.Continue;
     }
@@ -420,5 +415,14 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         Server.ExecuteCommand("css_plugins reload GunGameLite");
         
         LogHelper.LogToChatAll($"{Config.Tag}{Config.Colors.Highlight}{caller.PlayerName}{ChatColors.Default} has reloaded the plugin!");
+    }
+    
+    [RequiresPermissions("@css/root")]
+    [ConsoleCommand("ggl_test")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+    public void OnTestCommand(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null) return;
+        AnnounceWinner(caller);
     }
 }
