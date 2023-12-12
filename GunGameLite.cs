@@ -15,7 +15,7 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
     public override string ModuleName => "GunGameLite";
     public override string ModuleDescription =>
         "GunGame Lite is a simple and basic GunGame Plugin for CounterStrikeSharp";
-    public override string ModuleVersion => "0.0.7";
+    public override string ModuleVersion => "0.0.8";
     
     private static string ModuleDisplayName => "GunGame Lite";
     
@@ -101,12 +101,10 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         var player = @event.Userid;
         if (player == null) return HookResult.Continue;
         
-        InitializePlayer(@event.Userid);
+        // remove player from dictionary if exists
+        _playerCurrentWeapon.Remove(player);
         
-        // var activePlayers = Utilities.GetPlayers();
-        // var realPlayers = activePlayers.Where(p => p is { IsValid: true, IsBot: false });
-        // LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Real Player joined. Restarting game if there is only one real player.");
-        // // if (realPlayers.Count() == 1 && Config.Bots.Enabled) Server.ExecuteCommand("mp_restartgame 1");
+        InitializePlayer(@event.Userid);
         
         return HookResult.Continue;
     }
@@ -118,6 +116,11 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         var player = @event.Userid;
         if (player == null || !player.IsValid || !player.PawnIsAlive) return HookResult.Continue;
         
+        LogHelper.LogToChat(player, $"{Config.Tag}Welcome to {Config.Colors.Highlight}{ModuleDisplayName}{ChatColors.Default}, {player.PlayerName}");
+        LogHelper.LogToChat(player, $"{Config.Tag}{Config.Colors.Highlight}{ModuleDisplayName}{ChatColors.Default} is still in development.");
+        LogHelper.LogToChat(player, $"{Config.Tag}Please report any bugs to {ChatColors.Gold}creazy231{ChatColors.Default} on Discord!");
+        LogHelper.LogToChat(player, $"{Config.Tag}Version: {ChatColors.Gold}{ModuleVersion}{ChatColors.Default}");
+        
         InitializePlayer(@event.Userid);
         
         return HookResult.Continue;
@@ -125,21 +128,33 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
 
     private void InitializePlayer(CCSPlayerController player)
     {
-        if (_playerCurrentWeapon.ContainsKey(player))
+        LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> -> Init Player");
+
+        // If the game has already started and the player is not in the _playerCurrentWeapon dictionary
+        if (_playerCurrentWeapon.Count > 0 && !_playerCurrentWeapon.ContainsKey(player))
         {
-            player.Score = 0;
-            _playerCurrentWeapon[player] = "";
+            LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> -> Avg Weapon");
+
+            // Calculate the lowest score of all players currently in the game
+            var lowestScore = _playerCurrentWeapon.Values.Min(score => Array.IndexOf(Config.WeaponOrder, score));
+
+            // Assign the new player a starting weapon based on the average score
+            if (lowestScore > 0) _playerCurrentWeapon[player] = Config.WeaponOrder[Math.Min(lowestScore - 1, Config.WeaponOrder.Length - 1)];
         }
         else
         {
-            player.Score = 0;
-            _playerCurrentWeapon.TryAdd(player, "");
+            // Existing logic for players who are already in the game
+            if (_playerCurrentWeapon.ContainsKey(player))
+            {
+                player.Score = 0;
+                _playerCurrentWeapon[player] = "";
+            }
+            else
+            {
+                player.Score = 0;
+                _playerCurrentWeapon.TryAdd(player, "");
+            }
         }
-        
-        LogHelper.LogToChat(player, $"{Config.Tag}Welcome to {Config.Colors.Highlight}{ModuleDisplayName}{ChatColors.Default}, {player.PlayerName}");
-        LogHelper.LogToChat(player, $"{Config.Tag}{Config.Colors.Highlight}{ModuleDisplayName}{ChatColors.Default} is still in development.");
-        LogHelper.LogToChat(player, $"{Config.Tag}Please report any bugs to {ChatColors.Gold}creazy231{ChatColors.Default} on Discord!");
-        LogHelper.LogToChat(player, $"{Config.Tag}Version: {ChatColors.Gold}{ModuleVersion}{ChatColors.Default}");
         
         GivePlayerNextWeapon(player);
     }
@@ -232,6 +247,14 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         
         var nextWeapon = Config.WeaponOrder[currentWeaponIndex + 1];
         
+        var lowestScore = _playerCurrentWeapon.Values.Min(score => Array.IndexOf(Config.WeaponOrder, score));
+        
+        // Assign the new player a starting weapon based on the average score if the players nextWeapon would be lower than the lowestScore
+        if (Array.IndexOf(Config.WeaponOrder, nextWeapon) < lowestScore - 1)
+        {
+            nextWeapon = Config.WeaponOrder[Math.Min(lowestScore, Config.WeaponOrder.Length - 1)];
+        }
+        
         LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Giving player {player.PlayerName} next weapon: {nextWeapon}");
         
         player.PawnArmor = 100;
@@ -243,6 +266,13 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
             // player.GiveNamedItem("weapon_knifegg");
             player.GiveNamedItem("weapon_knife");
             LogHelper.LogToChatAll($"{Config.Tag}{Config.Colors.Highlight}{player.PlayerName}{ChatColors.LightRed} has a knife and is about to win!");
+            
+            var activePlayers = Utilities.GetPlayers();
+            foreach (var activePlayer in activePlayers)
+            {
+                if (activePlayer.IsBot || !activePlayer.IsValid) continue;
+                PrintHelper.PlayerCenterHtml(activePlayer, $"<font class='fontSize-m' color='white'><span color='#de9b35'>{player.PlayerName}</span><br>has a knife and is about to win!</font>", 3);
+            }
         }
         else
         {
@@ -287,7 +317,7 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         
         LogHelper.LogToConsole(ConsoleColor.Green, $"[GunGame Lite Plugin] -> Someone died. {player.PlayerName} was killed by {attacker.PlayerName}");
 
-        AnnouncePlayerWithMostScore();
+        AnnouncePlayerWithMostScore(attacker);
 
         return HookResult.Continue;
     }
@@ -300,7 +330,7 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         
         if (!_playerCurrentWeapon.TryGetValue(player, out var currentWeapon)) return HookResult.Continue;
         
-        if (currentWeapon == "hegrenade")
+        if (currentWeapon == "hegrenade" || currentWeapon == "molotov")
         {
             // TODO: make this variable using config
             Instance?.AddTimer(3.0f, () =>
@@ -328,10 +358,13 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
             if (activePlayer.IsBot || !activePlayer.IsValid) continue;
             activePlayer.RemoveWeapons();
             PrintHelper.PlayerCenterHtml(activePlayer, $"<font class='fontSize-m' color='white'>Winner Winner Chicken Dinner</font><br><font class='fontSize-l' color='#2E9F65'>{winner.PlayerName}</font>", 5);
+            LogHelper.LogToChatAll($"{Config.Tag}Winner Winner Chicken Dinner: {ChatColors.Gold}{winner.PlayerName}{ChatColors.Default}!");
+            LogHelper.LogToChatAll($"{Config.Tag}Winner Winner Chicken Dinner: {ChatColors.Gold}{winner.PlayerName}{ChatColors.Default}!");
+            LogHelper.LogToChatAll($"{Config.Tag}Winner Winner Chicken Dinner: {ChatColors.Gold}{winner.PlayerName}{ChatColors.Default}!");
         }
     }
 
-    private void AnnouncePlayerWithMostScore()
+    private void AnnouncePlayerWithMostScore(CCSPlayerController? attacker = null)
     {
         var activePlayers = Utilities.GetPlayers();
         var highestScore = 0;
@@ -342,16 +375,25 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
             highestScoreName = activePlayer.PlayerName;
         }
 
-        if (highestScoreName == _highestScoreName) return;
+        if (highestScoreName == _highestScoreName)
+        {
+            if (attacker?.PlayerName == highestScoreName) LogHelper.LogToChatAll($"{Config.Tag}{ChatColors.Gold}{highestScoreName}{ChatColors.LightRed} is still leading with {ChatColors.Gold}{highestScore}{ChatColors.LightRed} points!");
+            return;
+        }
+
+        string leadingMessage = $"{Config.Tag}" +
+                             $"{ChatColors.Gold}{highestScoreName}{ChatColors.LightRed} has taken the lead " +
+                             $"{(string.IsNullOrEmpty(_highestScoreName) ? "" : $"from {ChatColors.Gold}{_highestScoreName}{ChatColors.LightRed}")}" +
+                             $" with {ChatColors.Gold}{highestScore}{ChatColors.LightRed} points!";
+        
+        LogHelper.LogToChatAll(leadingMessage);
         
         _highestScoreName = highestScoreName;
-        
-        LogHelper.LogToChatAll($"{Config.Tag}{ChatColors.Gold}{highestScoreName}{ChatColors.LightRed} has taken the lead with {ChatColors.Gold}{highestScore}{ChatColors.LightRed} kills!");
     }
 
     #region Events
 
-    [GameEventHandler(HookMode.Post)]
+    [GameEventHandler]
     private HookResult OnPlayerDisconnect(EventPlayerDisconnect @event, GameEventInfo _)
     {
         var player = @event.Userid;
@@ -402,7 +444,7 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         
         Config.Bots.Enabled = !Config.Bots.Enabled;
         LogHelper.LogToChatAll($"{Config.Tag}{Config.Colors.Highlight}{caller.PlayerName}{ChatColors.Default} has toggled bots to {Config.Bots.Enabled}!");
-        Server.ExecuteCommand("mp_restartgame 1");
+        if (!Config.Bots.Enabled) Server.ExecuteCommand("bot_kick all");
     }
     
     [RequiresPermissions("@css/root")]
