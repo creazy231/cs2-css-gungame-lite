@@ -25,7 +25,7 @@ namespace GunGameLite
             Server.ExecuteCommand("mp_death_drop_gun 0");
             Server.ExecuteCommand("mp_free_armor 2");
             Server.ExecuteCommand("mp_maxmoney 0");
-            Server.ExecuteCommand("mp_respawn_immunitytime 5");
+            Server.ExecuteCommand("mp_respawn_immunitytime 10");
             Server.ExecuteCommand("mp_respawn_on_death_ct 1");
             Server.ExecuteCommand("mp_respawn_on_death_t 1");
             Server.ExecuteCommand("mp_startmoney 0");

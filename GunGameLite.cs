@@ -355,7 +355,7 @@ public class GunGameLite : BasePlugin, IPluginConfig<GunGameLiteConfig>
         var activePlayers = Utilities.GetPlayers();
         foreach (var activePlayer in activePlayers)
         {
-            if (activePlayer.IsBot || !activePlayer.IsValid) continue;
+            if (!activePlayer.IsValid) continue;
             activePlayer.RemoveWeapons();
             PrintHelper.PlayerCenterHtml(activePlayer, $"<font class='fontSize-m' color='white'>Winner Winner Chicken Dinner</font><br><font class='fontSize-l' color='#2E9F65'>{winner.PlayerName}</font>", 5);
             LogHelper.LogToChatAll($"{Config.Tag}Winner Winner Chicken Dinner: {ChatColors.Gold}{winner.PlayerName}{ChatColors.Default}!");
