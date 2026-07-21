@@ -62,6 +62,10 @@ public sealed class GunGameEngine
 
         var attacker = Ensure(attackerSlot);
 
+        // Snapshot the pack minimum BEFORE any demotion so the attacker's catch-up
+        // target does not depend on whether this same kill demoted a pack member.
+        var attackerMinOthers = MinIndexExcept(attackerSlot);
+
         if (weaponIsKnife && _knifeStealsLevel) DemoteVictim(victim, result);
 
         attacker.Kills += 1;
@@ -69,11 +73,12 @@ public sealed class GunGameEngine
         if (WeaponProgression.IsWinningKill(attacker.WeaponIndex, _weaponCount))
         {
             result.AttackerWon = true;
+            result.AttackerNewIndex = attacker.WeaponIndex;
             return result;
         }
 
         attacker.WeaponIndex = WeaponProgression.AdvanceIndex(
-            attacker.WeaponIndex, _weaponCount, MinIndexExcept(attackerSlot), _catchUp);
+            attacker.WeaponIndex, _weaponCount, attackerMinOthers, _catchUp);
         result.AttackerAdvanced = true;
         result.AttackerNewIndex = attacker.WeaponIndex;
         return result;

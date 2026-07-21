@@ -139,4 +139,29 @@ public class GunGameEngineTests
             r = e.OnKill(0, 1, false, false, false);
         Assert.True(r.AttackerWon);
     }
+
+    [Fact]
+    public void OnKill_EnemyKnife_AttackerCatchUpUsesPreDemotionPack()
+    {
+        // A straggler knifing a pack member should snap up to the SAME index as an
+        // equivalent normal kill (10), not one less because the victim just dropped to 9.
+        var e = New();
+        e.Seed(1, 10);
+        e.OnPlayerJoin(0);
+        e.Seed(0, 0);
+        var r = e.OnKill(0, 1, sameTeam: false, weaponIsKnife: true, isSuicide: false);
+        Assert.Equal(10, r.AttackerNewIndex);
+        Assert.Equal(9, e.GetProgress(1).WeaponIndex);
+    }
+
+    [Fact]
+    public void OnKill_Demotion_DecrementsVictimKillsFlooredAtZero()
+    {
+        var e = New();
+        e.Seed(0, 5);
+        e.Seed(1, 5, kills: 3);
+        e.OnKill(0, 1, sameTeam: false, weaponIsKnife: true, isSuicide: false);
+        Assert.Equal(2, e.GetProgress(1).Kills);
+        Assert.Equal(4, e.GetProgress(1).WeaponIndex);
+    }
 }
