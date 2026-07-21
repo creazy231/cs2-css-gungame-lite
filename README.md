@@ -51,7 +51,7 @@ All commands require the `@css/root` permission.
 
 | Key | Default | Description |
 |---|---|---|
-| `Tag` | `[GGL]` | Chat prefix (supports `{COLOR}` tokens). |
+| `Tag` | `{DEFAULT}[{PURPLE}GGL{DEFAULT}]{DEFAULT} ` | Chat prefix (supports `{COLOR}` tokens). |
 | `Colors.Highlight` | `{PURPLE}` | Highlight color token. |
 | `Bots.Enabled` | `true` | Fill teams with bots. |
 | `Bots.QuotaPerTeam` | `2` | Target players (humans + bots) per team. |
