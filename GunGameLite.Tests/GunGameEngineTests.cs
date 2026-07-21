@@ -164,4 +164,14 @@ public class GunGameEngineTests
         Assert.Equal(2, e.GetProgress(1).Kills);
         Assert.Equal(4, e.GetProgress(1).WeaponIndex);
     }
+
+    [Fact]
+    public void OnKill_Demotion_VictimKillsNeverGoBelowZero()
+    {
+        var e = New();
+        e.Seed(0, 5);
+        e.Seed(1, 5, kills: 0);
+        e.OnKill(0, 1, sameTeam: false, weaponIsKnife: true, isSuicide: false);
+        Assert.Equal(0, e.GetProgress(1).Kills);
+    }
 }

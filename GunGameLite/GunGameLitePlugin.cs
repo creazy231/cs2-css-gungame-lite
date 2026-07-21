@@ -220,11 +220,13 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
         if (weapon is "hegrenade" or "molotov" or "incgrenade")
         {
             var slot = player.Slot;
-            var index = progress.WeaponIndex;
             AddTimer(Config.Gameplay.GrenadeRegiveDelaySeconds, () =>
             {
                 var p = Utilities.GetPlayerFromSlot(slot);
-                if (p is { IsValid: true, PawnIsAlive: true }) GiveWeaponForIndex(p, index);
+                // Re-read the current index at timer time: a grenade kill may have advanced
+                // the thrower (e.g. to the knife); don't overwrite it with a stale grenade.
+                if (p is { IsValid: true, PawnIsAlive: true })
+                    GiveWeaponForIndex(p, _engine.GetProgress(slot).WeaponIndex);
             });
         }
 
@@ -284,8 +286,8 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
         Server.ExecuteCommand("mp_respawn_on_death_ct 0");
         Server.ExecuteCommand("mp_respawn_on_death_t 0");
 
-        var gameRules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First().GameRules!;
-        gameRules.TerminateRound(5.0f, RoundEndReason.RoundDraw);
+        var gameRules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").FirstOrDefault()?.GameRules;
+        gameRules?.TerminateRound(5.0f, RoundEndReason.RoundDraw);
 
         foreach (var p in Utilities.GetPlayers().Where(p => p.IsValid))
         {
