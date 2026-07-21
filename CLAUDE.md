@@ -21,7 +21,7 @@ A **CounterStrikeSharp (CSS) plugin** implementing a "GunGame Lite" mode for **C
 
 - Build: `dotnet build -c Release` → `GunGameLite/bin/Release/net10.0/GunGameLite.dll`
 - Test: `dotnet test -c Release`
-- Release: push a git tag; CI (`.github/workflows/build.yml`) runs test → build → publish.
+- Release: bump `ModuleVersion` in `GunGameLitePlugin.cs` and push to `main`. CI (`.github/workflows/build.yml`) runs test → build → release, and auto-creates a `vX.Y.Z` GitHub Release with `GunGameLite.zip` when that version tag doesn't already exist (unchanged versions are a no-op).
 - Deploy: copy build output to `game/csgo/addons/counterstrikesharp/plugins/GunGameLite/`; hot-reload with `css_plugins reload GunGameLite` or `css_ggl_reload`.
 
 ## Conventions

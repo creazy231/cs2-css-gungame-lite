@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "*"
   pull_request:
     branches:
       - main
@@ -45,39 +43,84 @@ jobs:
       - name: Build
         run: dotnet build ${{ env.PROJECT_PATH }} -c Release -o ${{ env.OUTPUT_PATH }}
 
-  publish:
-    if: startsWith(github.ref, 'refs/tags/')
+  # Cuts a GitHub Release automatically whenever the plugin's ModuleVersion is
+  # bumped on main. It reads the version from GunGameLitePlugin.cs and creates a
+  # vX.Y.Z tag + release with GunGameLite.zip attached, but only if that version
+  # has not been released yet — so ordinary pushes that don't change the version
+  # are a no-op.
+  release:
+    if: github.event_name == 'push'
     permissions:
       contents: write
     runs-on: ubuntu-latest
     needs: build
     steps:
       - uses: actions/checkout@v4
+
+      - name: Read plugin version
+        id: version
+        run: |
+          VERSION=$(grep -oP 'ModuleVersion\s*=>\s*"\K[0-9]+\.[0-9]+\.[0-9]+' GunGameLite/GunGameLitePlugin.cs)
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not parse ModuleVersion from GunGameLite/GunGameLitePlugin.cs"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Detected plugin version v$VERSION"
+
+      - name: Check whether this version is already released
+        id: exists
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            echo "released=true" >> "$GITHUB_OUTPUT"
+            echo "Tag ${{ steps.version.outputs.tag }} already exists — nothing to release."
+          else
+            echo "released=false" >> "$GITHUB_OUTPUT"
+            echo "Tag ${{ steps.version.outputs.tag }} is new — a release will be created."
+          fi
+
       - name: Setup .NET
+        if: steps.exists.outputs.released == 'false'
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-      - name: Restore
-        run: dotnet restore
+
       - name: Build
+        if: steps.exists.outputs.released == 'false'
         run: dotnet build ${{ env.PROJECT_PATH }} -c Release -o ${{ env.OUTPUT_PATH }}
+
       - name: Clean files
+        if: steps.exists.outputs.released == 'false'
         run: |
           rm -f \
             ${{ env.OUTPUT_PATH }}/GunGameLite.deps.json \
             ${{ env.OUTPUT_PATH }}/GunGameLite.pdb
+
       - name: Zip
+        if: steps.exists.outputs.released == 'false'
         uses: thedoctor0/zip-release@0.7.5
         with:
           type: 'zip'
           filename: '${{ env.PROJECT_NAME }}.zip'
           path: ${{ env.PUBLISH_PATH }}
+
       - name: Create Release
+        if: steps.exists.outputs.released == 'false'
         uses: ncipollo/release-action@v1.14.0
         with:
           artifacts: "${{ env.PROJECT_NAME }}.zip"
-          name: "${{ github.ref_name }}"
-          tag: "${{ github.ref_name }}"
-          allowUpdates: true
+          name: "${{ steps.version.outputs.tag }}"
+          tag: "${{ steps.version.outputs.tag }}"
+          commit: ${{ github.sha }}
+          makeLatest: true
+          skipIfReleaseExists: true
           body: |
-            Place the plugin in game/csgo/addons/counterstrikesharp/plugins/GunGameLite
+            ## GunGame Lite ${{ steps.version.outputs.version }}
+
+            ### Installation
+            1. Download **`GunGameLite.zip`** below.
+            2. Extract it into `game/csgo/addons/counterstrikesharp/plugins/GunGameLite/` on your CS2 server.
+            3. Restart the server, or run `css_plugins reload GunGameLite` in the console.
+
+            Requires [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp) v1.0.371+.
