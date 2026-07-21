@@ -13,3 +13,6 @@ Thumbs.db
 
 # Local publish
 *.zip
+
+# Planning docs (specs/plans are internal, not shipped with the plugin)
+docs/
