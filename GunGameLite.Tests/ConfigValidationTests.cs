@@ -9,7 +9,7 @@ public class ConfigValidationTests
     public void Defaults_AreSane()
     {
         var c = new GunGameLiteConfig();
-        Assert.Equal(2, c.Version);
+        Assert.Equal(3, c.Version);
         Assert.Equal(2, c.Bots.QuotaPerTeam);
         Assert.True(c.Gameplay.InfiniteAmmo);
         Assert.False(c.Gameplay.TeamKillsCount);
@@ -68,5 +68,50 @@ public class ConfigValidationTests
         var c = new GunGameLiteConfig { WeaponOrder = custom };
         c.Validate();
         Assert.Equal(custom, c.WeaponOrder);
+    }
+
+    [Fact]
+    public void ServerDefaults_AreSane()
+    {
+        var c = new GunGameLiteConfig();
+        Assert.True(c.Server.GameModeCheck);
+        Assert.True(c.Server.RandomSpawns);
+        Assert.Equal(0, c.Server.FreezeTimeSeconds);
+        Assert.Equal(60, c.Server.RoundTimeMinutes);
+        Assert.Equal(0f, c.Server.DeathCamSeconds);
+    }
+
+    [Fact]
+    public void Validate_ClampsServerRanges()
+    {
+        var c = new GunGameLiteConfig();
+        c.Server.FreezeTimeSeconds = -5;
+        c.Server.RoundTimeMinutes = 0;
+        c.Server.DeathCamSeconds = -1.5f;
+
+        c.Validate();
+
+        Assert.Equal(0, c.Server.FreezeTimeSeconds);
+        Assert.Equal(1, c.Server.RoundTimeMinutes);
+        Assert.Equal(0f, c.Server.DeathCamSeconds);
+    }
+
+    [Fact]
+    public void Validate_LeavesValidServerValuesAlone()
+    {
+        var c = new GunGameLiteConfig();
+        c.Server.FreezeTimeSeconds = 3;
+        c.Server.RoundTimeMinutes = 15;
+        c.Server.DeathCamSeconds = 2.5f;
+        c.Server.RandomSpawns = false;
+        c.Server.GameModeCheck = false;
+
+        c.Validate();
+
+        Assert.Equal(3, c.Server.FreezeTimeSeconds);
+        Assert.Equal(15, c.Server.RoundTimeMinutes);
+        Assert.Equal(2.5f, c.Server.DeathCamSeconds);
+        Assert.False(c.Server.RandomSpawns);
+        Assert.False(c.Server.GameModeCheck);
     }
 }
