@@ -46,6 +46,21 @@ public sealed class GameplayConfig
     [JsonPropertyName("DemoteOnSuicide")] public bool DemoteOnSuicide { get; set; } = true;
 }
 
+/// <summary>
+/// The handful of server cvars an admin may legitimately want to disagree about. Everything else
+/// ServerRuleset enforces is fixed, because getting it wrong breaks GunGame rather than retuning it.
+/// </summary>
+public sealed class ServerConfig
+{
+    /// <summary>Warn admins when game_type/game_mode is wrong for GunGame. Turn off if you run Custom mode on purpose.</summary>
+    [JsonPropertyName("GameModeCheck")] public bool GameModeCheck { get; set; } = true;
+
+    [JsonPropertyName("RandomSpawns")] public bool RandomSpawns { get; set; } = true;
+    [JsonPropertyName("FreezeTimeSeconds")] public int FreezeTimeSeconds { get; set; } = 0;
+    [JsonPropertyName("RoundTimeMinutes")] public int RoundTimeMinutes { get; set; } = 60;
+    [JsonPropertyName("DeathCamSeconds")] public float DeathCamSeconds { get; set; } = 0f;
+}
+
 public sealed class HudConfig
 {
     [JsonPropertyName("ShowProgress")] public bool ShowProgress { get; set; } = true;
@@ -53,12 +68,13 @@ public sealed class HudConfig
 
 public sealed class GunGameLiteConfig : BasePluginConfig
 {
-    public override int Version => 2;
+    public override int Version => 3;
 
     [JsonPropertyName("Tag")] public string Tag { get; set; } = "{DEFAULT}[{PURPLE}GGL{DEFAULT}]{DEFAULT} ";
     [JsonPropertyName("Colors")] public Colors Colors { get; set; } = new();
     [JsonPropertyName("Bots")] public BotsConfig Bots { get; set; } = new();
     [JsonPropertyName("Gameplay")] public GameplayConfig Gameplay { get; set; } = new();
+    [JsonPropertyName("Server")] public ServerConfig Server { get; set; } = new();
     [JsonPropertyName("Hud")] public HudConfig Hud { get; set; } = new();
     [JsonPropertyName("WeaponOrder")] public string[] WeaponOrder { get; set; } = (string[])DefaultWeaponOrder.Clone();
 
@@ -82,6 +98,10 @@ public sealed class GunGameLiteConfig : BasePluginConfig
         if (Gameplay.GrenadeRegiveDelaySeconds < 0f) Gameplay.GrenadeRegiveDelaySeconds = 0f;
         if (Gameplay.SpawnProtection.Seconds < 0f) Gameplay.SpawnProtection.Seconds = 0f;
         if (Gameplay.Warmup.Seconds < 0) Gameplay.Warmup.Seconds = 0;
+
+        if (Server.FreezeTimeSeconds < 0) Server.FreezeTimeSeconds = 0;
+        if (Server.RoundTimeMinutes < 1) Server.RoundTimeMinutes = 1;
+        if (Server.DeathCamSeconds < 0f) Server.DeathCamSeconds = 0f;
 
         if (WeaponOrder is null || WeaponOrder.Length == 0 || WeaponOrder[^1] != "knife")
             WeaponOrder = (string[])DefaultWeaponOrder.Clone();
