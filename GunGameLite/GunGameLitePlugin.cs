@@ -42,18 +42,15 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
             config.Gameplay.DemoteOnSuicide,
             config.Gameplay.TeamKillsCount);
 
+        // mp_autoteambalance / mp_limitteams now live in ServerRuleset and apply unconditionally.
         if (config.Bots.Enabled)
-        {
-            Server.ExecuteCommand("mp_autoteambalance 0");
-            Server.ExecuteCommand("mp_limitteams 0");
             Server.ExecuteCommand($"bot_difficulty {config.Bots.Difficulty}");
-        }
     }
 
     public override void Load(bool hotReload)
     {
         Instance = this;
-        ServerRuleset.Apply();
+        ServerRuleset.Apply(Config.Server);
 
         RegisterListener<Listeners.OnMapStart>(_ => { if (Config.Gameplay.Warmup.Enabled) StartWarmup(); });
 
@@ -177,7 +174,7 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
     [GameEventHandler]
     public HookResult OnRoundStart(EventRoundStart @event, GameEventInfo info)
     {
-        ServerRuleset.Apply();
+        ServerRuleset.Apply(Config.Server);
         Server.ExecuteCommand("bot_kick all");
 
         _engine.Reset();
