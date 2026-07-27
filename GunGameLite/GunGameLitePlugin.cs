@@ -21,7 +21,7 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
     public override string ModuleAuthor => "creazy.eth";
     public override string ModuleName => "GunGameLite";
     public override string ModuleDescription => "A simple GunGame game mode for Counter-Strike 2.";
-    public override string ModuleVersion => "0.2.0";
+    public override string ModuleVersion => "0.2.1";
 
     public static GunGameLitePlugin? Instance { get; private set; }
     public GunGameLiteConfig Config { get; set; } = new();
@@ -33,6 +33,9 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
     private bool _warmupActive;
     private GameModeVerdict? _gameModeVerdict;
     private bool _gameModeReported;
+
+    /// <summary>Extra 0.1s retries while a spawning pawn comes up, before giving up on it.</summary>
+    private const int MaxPawnReadyAttempts = 3;
 
     public void OnConfigParsed(GunGameLiteConfig config)
     {
@@ -120,7 +123,11 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
     public HookResult OnPlayerSpawn(EventPlayerSpawn @event, GameEventInfo info)
     {
         var player = @event.Userid;
-        if (player is null || !player.IsValid || player.IsHLTV || !player.PawnIsAlive) return HookResult.Continue;
+        // Do NOT gate on PawnIsAlive here: EventPlayerSpawn fires before the pawn is initialised, so
+        // it is usually false at this point. Gating on it skipped the weapon give entirely, leaving
+        // the player on the engine's default loadout — a bare knife. Both calls below defer and
+        // re-check the pawn themselves, which is the right place for that check.
+        if (player is null || !player.IsValid || player.IsHLTV) return HookResult.Continue;
 
         _engine.OnPlayerJoin(player.Slot);
         GiveWeaponForIndex(player, _engine.GetProgress(player.Slot).WeaponIndex);
@@ -364,18 +371,40 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
         ChatHelper.ToChat(player, $"{Config.Tag}Version: {ChatColors.Gold}{ModuleVersion}{ChatColors.Default}");
     }
 
+    /// <summary>
+    /// Runs an action once the player's pawn is actually up. EventPlayerSpawn fires before the pawn is
+    /// initialised, so anything touching it has to wait — and has to retry rather than give up, or the
+    /// player is left on the engine's default loadout (a bare knife), which is how bots ended up
+    /// knife-only. Re-resolves from the slot each attempt per the repo's slot-keyed convention.
+    /// </summary>
+    private void WhenPawnReady(int slot, Action<CCSPlayerController> action, int attempt = 0)
+    {
+        AddTimer(0.1f, () =>
+        {
+            var player = Utilities.GetPlayerFromSlot(slot);
+            if (player is null || !player.IsValid) return;
+
+            if (!player.PawnIsAlive)
+            {
+                if (attempt < MaxPawnReadyAttempts) WhenPawnReady(slot, action, attempt + 1);
+                return;
+            }
+
+            action(player);
+        });
+    }
+
     private void GiveWeaponForIndex(CCSPlayerController player, int index)
     {
         if (index < 0 || index >= Config.WeaponOrder.Length) return;
         var weapon = Config.WeaponOrder[index];
 
-        AddTimer(0.1f, () =>
+        WhenPawnReady(player.Slot, p =>
         {
-            if (!player.IsValid || !player.PawnIsAlive) return;
-            player.RemoveWeapons();
-            player.GiveNamedItem("item_assaultsuit");
-            player.GiveNamedItem("weapon_knife");
-            if (weapon != "knife") player.GiveNamedItem($"weapon_{weapon}");
+            p.RemoveWeapons();
+            p.GiveNamedItem("item_assaultsuit");
+            p.GiveNamedItem("weapon_knife");
+            if (weapon != "knife") p.GiveNamedItem($"weapon_{weapon}");
         });
     }
 
@@ -456,14 +485,19 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
     private void ApplySpawnProtection(CCSPlayerController player)
     {
         if (!Config.Gameplay.SpawnProtection.Enabled) return;
-        var pawn = player.PlayerPawn.Value;
-        if (pawn is null || !pawn.IsValid) return;
 
-        pawn.TakesDamage = false;
-        _protected.Add(player.Slot);
+        // Same reason as the weapon give: reading the pawn on the spawn tick used to silently skip
+        // protection for exactly the players whose pawn was slowest to come up.
+        WhenPawnReady(player.Slot, p =>
+        {
+            var pawn = p.PlayerPawn.Value;
+            if (pawn is null || !pawn.IsValid) return;
 
-        var slot = player.Slot;
-        AddTimer(Config.Gameplay.SpawnProtection.Seconds, () => ClearSpawnProtection(slot));
+            pawn.TakesDamage = false;
+            _protected.Add(p.Slot);
+
+            AddTimer(Config.Gameplay.SpawnProtection.Seconds, () => ClearSpawnProtection(p.Slot));
+        });
     }
 
     private void ClearSpawnProtection(int slot)
