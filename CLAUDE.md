@@ -10,10 +10,10 @@ A **CounterStrikeSharp (CSS) plugin** implementing a "GunGame Lite" mode for **C
 
 - `GunGameLite/` — the plugin project (`GunGameLite.dll`).
   - `GunGameLitePlugin.cs` — thin `BasePlugin` adapter: classifies CS2 events into primitives, calls the engine, applies results to the world. No game logic of its own.
-  - `Engine/` — **CSS-free, unit-tested core.** `GunGameEngine` (slot→`PlayerProgress` map, `OnKill`/`OnPlayerJoin`/`Reset`), `WeaponProgression` (index math), `BotBalancer`, `SpawnProtection`, `LeaderTracker`. Import no CS2 runtime calls.
+  - `Engine/` — **CSS-free, unit-tested core.** `GunGameEngine` (slot→`PlayerProgress` map, `OnKill`/`OnPlayerJoin`/`Reset`), `WeaponProgression` (index math), `BotBalancer`, `SpawnProtection`, `LeaderTracker`, `GameModeCheck` (classifies `game_type`/`game_mode`; the plugin can only warn, since neither cvar applies without a map change). Import no CS2 runtime calls.
   - `Config/GunGameLiteConfig.cs` — `BasePluginConfig` (Version 2) + `Validate()`.
   - `State/PlayerProgress.cs` — `{ WeaponIndex, Kills }`.
-  - `Helpers/` — `ChatHelper` (chat + `{TOKEN}` colors), `HudHelper` (center HTML), `ServerRuleset` (cvar batch).
+  - `Helpers/` — `ChatHelper` (chat + `{TOKEN}` colors), `HudHelper` (center HTML), `ServerRuleset` (cvar batch, takes `ServerConfig`).
   - `Extensions/` — `PlayerExtensions`, `HandleExtensions`.
 - `GunGameLite.Tests/` — xUnit tests for the engine/helpers/config (no server needed).
 
@@ -32,3 +32,5 @@ A **CounterStrikeSharp (CSS) plugin** implementing a "GunGame Lite" mode for **C
 4. **Weapon names** in `WeaponOrder` are bare (`"ak47"`); code prepends `weapon_`. Consumables (`hegrenade`/`molotov`) are re-given after `OnWeaponFire`.
 5. **Logging** via `Logger` (Microsoft.Extensions.Logging), not `Console.WriteLine`.
 6. Before assuming a CSS API exists, check against the referenced version (1.0.371).
+7. **The server must run Casual (`game_type 0` / `game_mode 0`).** Anything else has engine logic that fights the plugin; `GameModeCheck` warns admins about it. Neither cvar can be changed without a map change, so never try to set them from code.
+8. **Any `float` interpolated into a `Server.ExecuteCommand` string needs `FormattableString.Invariant`.** A `de-DE` server renders `0.5f` as `"0,5"` and the cvar parser rejects it.

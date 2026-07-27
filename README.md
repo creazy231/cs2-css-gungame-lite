@@ -22,6 +22,7 @@ Every kill upgrades your weapon. Work your way through the whole arsenal — the
 ## Requirements
 
 - A Counter-Strike 2 dedicated server with [Metamod:Source](https://www.sourcemm.net/) and [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp) **v1.0.371+** installed.
+- The server must run in **Casual** mode: `+game_type 0 +game_mode 0`. See [Game mode](#game-mode).
 
 ## Installation
 
@@ -35,6 +36,28 @@ Every kill upgrades your weapon. Work your way through the whole arsenal — the
    game/csgo/addons/counterstrikesharp/configs/plugins/GunGameLite/GunGameLite.json
    ```
 
+## Game mode
+
+GunGame Lite requires **Casual** — add `+game_type 0 +game_mode 0` to your server's start command
+line. Casual is the only stock CS2 mode with neither an engine-side weapon ladder nor engine-side
+respawn/loadout logic to fight. The plugin turns it into continuous respawn itself via
+`mp_respawn_on_death_t/ct 1`.
+
+| Mode | `game_type` | `game_mode` | Works? |
+|---|---|---|---|
+| **Casual** | **0** | **0** | ✅ Required |
+| Competitive | 0 | 1 | ❌ Half-time team swap, friendly fire, no respawn support |
+| Wingman | 0 | 2 | ❌ 2v2 on a small map subset |
+| Arms Race | 1 | 0 | ❌ CS2 runs its *own* gun-game ladder and overwrites the plugin's weapons |
+| Deathmatch | 1 | 2 | ❌ CS2's own respawn and bonus-weapon logic conflicts |
+| Custom | 3 | 0 | ⚠️ Works, but untested and needs a `gamemodes_server.txt` entry |
+
+`game_type` and `game_mode` only take effect on a **map change or server restart**, so the plugin
+cannot correct them — it warns instead. On every map it logs the verdict to the server console and
+messages any admin (`@css/generic` or `@css/root`) in chat. Regular players never see the warning.
+Run `css_ggl_check` to see the current verdict on demand, or set `Server.GameModeCheck` to `false`
+to silence it.
+
 ## Commands
 
 All commands require the `@css/root` permission.
@@ -44,6 +67,7 @@ All commands require the `@css/root` permission.
 | `css_ggl_restart` | Restart the GunGame (`mp_restartgame`). |
 | `css_ggl_bots` | Toggle bot filling on/off. |
 | `css_ggl_reload` | Hot-reload the plugin. |
+| `css_ggl_check` | Report the current game mode and the cvars the plugin enforces. |
 
 ## Configuration
 
@@ -69,6 +93,11 @@ All commands require the `@css/root` permission.
 | `Gameplay.KnifeStealsLevel` | `true` | Knife kills demote the victim. |
 | `Gameplay.DemoteOnSuicide` | `true` | Suicides/world deaths demote the victim. |
 | `Hud.ShowProgress` | `true` | Show the progress HUD. |
+| `Server.GameModeCheck` | `true` | Warn admins when `game_type`/`game_mode` is wrong. |
+| `Server.RandomSpawns` | `true` | `mp_randomspawn` — spread spawns out deathmatch-style. |
+| `Server.FreezeTimeSeconds` | `0` | `mp_freezetime`. |
+| `Server.RoundTimeMinutes` | `60` | `mp_roundtime` and its defuse/hostage variants. |
+| `Server.DeathCamSeconds` | `0.0` | `spec_freeze_time` — death cam length. |
 | `WeaponOrder` | 31-weapon ladder | Progression order; **must end with `knife`**. |
 
 ## Building from source
