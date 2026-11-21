@@ -71,15 +71,19 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
 
         Server.ExecuteCommand("mp_restartgame 1");
         Logger.LogInformation("{Name} v{Version} loaded", ModuleName, ModuleVersion);
+
+        // On a cold boot CSS loads plugins before the game server exists: there is no map, no entity
+        // and nobody connected. Calling into the game at that point killed the server (issue #1), so a
+        // cold boot stops here and the OnMapStart listener above starts the warmup once a map is up.
+        // Only a hot reload, with a map already running, carries on.
+        if (!hotReload) return;
+
         ChatHelper.ToChatAll($"{Config.Tag}{Config.Colors.Highlight}GunGame Lite v{ModuleVersion} loaded!");
 
-        if (hotReload)
+        foreach (var player in Utilities.GetPlayers())
         {
-            foreach (var player in Utilities.GetPlayers().Where(p => p is { IsValid: true }))
-            {
-                _engine.OnPlayerJoin(player.Slot);
-                if (!player.IsBot) _greeted.Add(player.Slot);
-            }
+            _engine.OnPlayerJoin(player.Slot);
+            if (!player.IsBot) _greeted.Add(player.Slot);
         }
 
         if (Config.Gameplay.Warmup.Enabled) StartWarmup();
