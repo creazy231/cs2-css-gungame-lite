@@ -46,7 +46,7 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
             config.Gameplay.CatchUp.Enabled,
             config.Gameplay.KnifeStealsLevel,
             config.Gameplay.DemoteOnSuicide,
-            config.Gameplay.TeamKillsCount);
+            config.Gameplay.TeamKillsAdvance);
 
         // mp_autoteambalance / mp_limitteams now live in ServerRuleset and apply unconditionally.
         if (config.Bots.Enabled)
@@ -56,7 +56,7 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
     public override void Load(bool hotReload)
     {
         Instance = this;
-        ServerRuleset.Apply(Config.Server);
+        ServerRuleset.Apply(Config);
 
         RegisterListener<Listeners.OnMapStart>(_ =>
         {
@@ -213,7 +213,7 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
     [GameEventHandler]
     public HookResult OnRoundStart(EventRoundStart @event, GameEventInfo info)
     {
-        ServerRuleset.Apply(Config.Server);
+        ServerRuleset.Apply(Config);
         Server.ExecuteCommand("bot_kick all");
 
         _engine.Reset();

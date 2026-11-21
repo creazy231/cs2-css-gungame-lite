@@ -9,10 +9,11 @@ public class ConfigValidationTests
     public void Defaults_AreSane()
     {
         var c = new GunGameLiteConfig();
-        Assert.Equal(3, c.Version);
+        Assert.Equal(4, c.Version);
         Assert.Equal(2, c.Bots.QuotaPerTeam);
         Assert.True(c.Gameplay.InfiniteAmmo);
         Assert.False(c.Gameplay.TeamKillsCount);
+        Assert.False(c.Gameplay.FreeForAll);
         Assert.Equal("knife", c.WeaponOrder[^1]);
         Assert.Equal(31, c.WeaponOrder.Length);
     }
@@ -113,5 +114,18 @@ public class ConfigValidationTests
         Assert.Equal(2.5f, c.Server.DeathCamSeconds);
         Assert.False(c.Server.RandomSpawns);
         Assert.False(c.Server.GameModeCheck);
+    }
+
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, true)]
+    public void TeamKillsAdvance_InFreeForAllOrWhenConfigured(bool freeForAll, bool teamKillsCount, bool expected)
+    {
+        var c = new GunGameLiteConfig();
+        c.Gameplay.FreeForAll = freeForAll;
+        c.Gameplay.TeamKillsCount = teamKillsCount;
+        Assert.Equal(expected, c.Gameplay.TeamKillsAdvance);
     }
 }
