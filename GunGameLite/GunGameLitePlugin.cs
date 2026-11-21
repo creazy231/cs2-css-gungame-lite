@@ -288,9 +288,10 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
     // ---- Game mode check ----
 
     /// <summary>
-    /// Reads game_type/game_mode. Returns null when either cvar is missing or reads outside its
-    /// plausible range: a cvar type mismatch would yield garbage integers, and staying quiet beats
-    /// telling an admin their mode is "Unknown (game_type 1919885362)".
+    /// Reads game_type/game_mode. Returns null when either cvar is missing, is not an int (CSS throws
+    /// InvalidOperationException on a type mismatch, so a future CS2 changing their type must not break
+    /// map start), or reads outside its plausible range: staying quiet beats telling an admin their
+    /// mode is "Unknown (game_type 1919885362)".
     /// </summary>
     private static (int gameType, int gameMode)? ReadGameMode()
     {
@@ -299,8 +300,17 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
         var modeCvar = ConVar.Find("game_mode");
         if (typeCvar is null || modeCvar is null) return null;
 
-        int gameType = typeCvar.GetPrimitiveValue<int>();
-        int gameMode = modeCvar.GetPrimitiveValue<int>();
+        int gameType, gameMode;
+        try
+        {
+            gameType = typeCvar.GetPrimitiveValue<int>();
+            gameMode = modeCvar.GetPrimitiveValue<int>();
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+
         if (gameType is < 0 or > 8 || gameMode is < 0 or > 4) return null;
 
         return (gameType, gameMode);

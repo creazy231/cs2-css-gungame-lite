@@ -10,6 +10,10 @@ namespace GunGameLite.Helpers;
 /// Deliberately not set: mp_timelimit (servers drive map rotation with it), sv_infinite_ammo
 /// (sv_cheats-gated, so Gameplay.InfiniteAmmo does it by hand instead), mp_warmuptime (the admin's
 /// call; the plugin has its own warmup).
+///
+/// Every cvar here exists in CS2 1.42.0.0. The CS:GO-era cash_player_killed_teammate_factor,
+/// mp_weapons_glow_on_ground, spec_freeze_panel_extended_time and mp_molotovusedelay were dropped:
+/// CS2 only answered them with "Unknown command" on every round start.
 /// </summary>
 public static class ServerRuleset
 {
@@ -31,7 +35,6 @@ public static class ServerRuleset
         Server.ExecuteCommand("cash_player_killed_enemy_default 0");
         Server.ExecuteCommand("cash_player_killed_enemy_factor 0");
         Server.ExecuteCommand("cash_player_killed_teammate 0");
-        Server.ExecuteCommand("cash_player_killed_teammate_factor 0");
 
         // Score: player.Score carries the GunGame kill count, so nothing else may write to it.
         Server.ExecuteCommand("contributionscore_assist 0");
@@ -61,7 +64,6 @@ public static class ServerRuleset
         Server.ExecuteCommand("mp_death_drop_gun 0");
         Server.ExecuteCommand("mp_death_drop_taser 0");
         Server.ExecuteCommand("mp_weapons_allow_map_placed 0");
-        Server.ExecuteCommand("mp_weapons_glow_on_ground 0");
 
         // Objectives: no bomb, no defusers. A round ends when someone knifes their way to the top.
         Server.ExecuteCommand("mp_defuser_allocation 0");
@@ -96,11 +98,9 @@ public static class ServerRuleset
         // Death cam: a long freeze cam fights instant respawn. Invariant culture is required —
         // a de-DE server would otherwise emit "spec_freeze_time 0,5" and the cvar parser would reject it.
         Server.ExecuteCommand("mp_forcecamera 0");
-        Server.ExecuteCommand(FormattableString.Invariant($"spec_freeze_panel_extended_time {config.DeathCamSeconds}"));
         Server.ExecuteCommand(FormattableString.Invariant($"spec_freeze_time {config.DeathCamSeconds}"));
 
         // Misc.
-        Server.ExecuteCommand("mp_molotovusedelay 0");
         Server.ExecuteCommand("sv_ignoregrenaderadio 1");
     }
 }
