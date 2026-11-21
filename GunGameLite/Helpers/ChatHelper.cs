@@ -8,10 +8,26 @@ namespace GunGameLite.Helpers;
 public static class ChatHelper
 {
     public static void ToChat(CCSPlayerController? player, string message)
-        => player?.PrintToChat(ReplaceTags(message + "{DEFAULT}"));
+    {
+        if (player is not { IsValid: true, IsBot: false, IsHLTV: false }) return;
+        player.PrintToChat(ReplaceTags(message + "{DEFAULT}"));
+    }
 
+    /// <summary>
+    /// Chats to every connected human, one player at a time. Deliberately not Server.PrintToChatAll: that
+    /// calls the game's UTIL_ClientPrintAll directly, which segfaults the server when it runs before the
+    /// game server is up, for example from Load() on a cold boot (issue #1). PrintToChat builds the message
+    /// inside CounterStrikeSharp and only ever targets a connected player, so with nobody there it does nothing.
+    /// </summary>
     public static void ToChatAll(string message)
-        => Server.PrintToChatAll(ReplaceTags(message + "{DEFAULT}"));
+    {
+        var text = ReplaceTags(message + "{DEFAULT}");
+        foreach (var player in Utilities.GetPlayers())
+        {
+            if (player.IsBot || player.IsHLTV) continue;
+            player.PrintToChat(text);
+        }
+    }
 
     public static string ReplaceTags(this string text)
     {

@@ -21,7 +21,7 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
     public override string ModuleAuthor => "creazy.eth";
     public override string ModuleName => "GunGameLite";
     public override string ModuleDescription => "A simple GunGame game mode for Counter-Strike 2.";
-    public override string ModuleVersion => "0.2.1";
+    public override string ModuleVersion => "0.3.0";
 
     public static GunGameLitePlugin? Instance { get; private set; }
     public GunGameLiteConfig Config { get; set; } = new();
@@ -46,7 +46,7 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
             config.Gameplay.CatchUp.Enabled,
             config.Gameplay.KnifeStealsLevel,
             config.Gameplay.DemoteOnSuicide,
-            config.Gameplay.TeamKillsCount);
+            config.Gameplay.TeamKillsAdvance);
 
         // mp_autoteambalance / mp_limitteams now live in ServerRuleset and apply unconditionally.
         if (config.Bots.Enabled)
@@ -56,7 +56,7 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
     public override void Load(bool hotReload)
     {
         Instance = this;
-        ServerRuleset.Apply(Config.Server);
+        ServerRuleset.Apply(Config);
 
         RegisterListener<Listeners.OnMapStart>(_ =>
         {
@@ -71,15 +71,19 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
 
         Server.ExecuteCommand("mp_restartgame 1");
         Logger.LogInformation("{Name} v{Version} loaded", ModuleName, ModuleVersion);
+
+        // On a cold boot CSS loads plugins before the game server exists: there is no map, no entity
+        // and nobody connected. Calling into the game at that point killed the server (issue #1), so a
+        // cold boot stops here and the OnMapStart listener above starts the warmup once a map is up.
+        // Only a hot reload, with a map already running, carries on.
+        if (!hotReload) return;
+
         ChatHelper.ToChatAll($"{Config.Tag}{Config.Colors.Highlight}GunGame Lite v{ModuleVersion} loaded!");
 
-        if (hotReload)
+        foreach (var player in Utilities.GetPlayers())
         {
-            foreach (var player in Utilities.GetPlayers().Where(p => p is { IsValid: true }))
-            {
-                _engine.OnPlayerJoin(player.Slot);
-                if (!player.IsBot) _greeted.Add(player.Slot);
-            }
+            _engine.OnPlayerJoin(player.Slot);
+            if (!player.IsBot) _greeted.Add(player.Slot);
         }
 
         if (Config.Gameplay.Warmup.Enabled) StartWarmup();
@@ -209,7 +213,7 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
     [GameEventHandler]
     public HookResult OnRoundStart(EventRoundStart @event, GameEventInfo info)
     {
-        ServerRuleset.Apply(Config.Server);
+        ServerRuleset.Apply(Config);
         Server.ExecuteCommand("bot_kick all");
 
         _engine.Reset();
@@ -284,9 +288,10 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
     // ---- Game mode check ----
 
     /// <summary>
-    /// Reads game_type/game_mode. Returns null when either cvar is missing or reads outside its
-    /// plausible range: a cvar type mismatch would yield garbage integers, and staying quiet beats
-    /// telling an admin their mode is "Unknown (game_type 1919885362)".
+    /// Reads game_type/game_mode. Returns null when either cvar is missing, is not an int (CSS throws
+    /// InvalidOperationException on a type mismatch, so a future CS2 changing their type must not break
+    /// map start), or reads outside its plausible range: staying quiet beats telling an admin their
+    /// mode is "Unknown (game_type 1919885362)".
     /// </summary>
     private static (int gameType, int gameMode)? ReadGameMode()
     {
@@ -295,8 +300,17 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
         var modeCvar = ConVar.Find("game_mode");
         if (typeCvar is null || modeCvar is null) return null;
 
-        int gameType = typeCvar.GetPrimitiveValue<int>();
-        int gameMode = modeCvar.GetPrimitiveValue<int>();
+        int gameType, gameMode;
+        try
+        {
+            gameType = typeCvar.GetPrimitiveValue<int>();
+            gameMode = modeCvar.GetPrimitiveValue<int>();
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+
         if (gameType is < 0 or > 8 || gameMode is < 0 or > 4) return null;
 
         return (gameType, gameMode);

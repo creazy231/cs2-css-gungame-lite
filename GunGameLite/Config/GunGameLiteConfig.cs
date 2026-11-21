@@ -41,9 +41,16 @@ public sealed class GameplayConfig
     [JsonPropertyName("InfiniteReserve")] public bool InfiniteReserve { get; set; } = true;
     [JsonPropertyName("GrenadeRegiveDelaySeconds")] public float GrenadeRegiveDelaySeconds { get; set; } = 3.0f;
     [JsonPropertyName("CatchUp")] public CatchUpConfig CatchUp { get; set; } = new();
+
+    /// <summary>Everyone fights everyone: teammates become enemies (mp_teammates_are_enemies) and killing one counts.</summary>
+    [JsonPropertyName("FreeForAll")] public bool FreeForAll { get; set; } = false;
+
     [JsonPropertyName("TeamKillsCount")] public bool TeamKillsCount { get; set; } = false;
     [JsonPropertyName("KnifeStealsLevel")] public bool KnifeStealsLevel { get; set; } = true;
     [JsonPropertyName("DemoteOnSuicide")] public bool DemoteOnSuicide { get; set; } = true;
+
+    /// <summary>Whether killing a teammate advances the attacker. Always true in free-for-all, where there are no teammates.</summary>
+    [JsonIgnore] public bool TeamKillsAdvance => FreeForAll || TeamKillsCount;
 }
 
 /// <summary>
@@ -68,7 +75,7 @@ public sealed class HudConfig
 
 public sealed class GunGameLiteConfig : BasePluginConfig
 {
-    public override int Version => 3;
+    public override int Version => 4;
 
     [JsonPropertyName("Tag")] public string Tag { get; set; } = "{DEFAULT}[{PURPLE}GGL{DEFAULT}]{DEFAULT} ";
     [JsonPropertyName("Colors")] public Colors Colors { get; set; } = new();
