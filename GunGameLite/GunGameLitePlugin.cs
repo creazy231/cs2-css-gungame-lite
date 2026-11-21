@@ -21,7 +21,7 @@ public class GunGameLitePlugin : BasePlugin, IPluginConfig<GunGameLiteConfig>
     public override string ModuleAuthor => "creazy.eth";
     public override string ModuleName => "GunGameLite";
     public override string ModuleDescription => "A simple GunGame game mode for Counter-Strike 2.";
-    public override string ModuleVersion => "0.2.1";
+    public override string ModuleVersion => "0.3.0";
 
     public static GunGameLitePlugin? Instance { get; private set; }
     public GunGameLiteConfig Config { get; set; } = new();
