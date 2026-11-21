@@ -12,7 +12,6 @@ env:
   PROJECT_NAME: "GunGameLite"
   PROJECT_PATH: "./GunGameLite/GunGameLite.csproj"
   OUTPUT_PATH: "./GunGameLite/GunGameLite"
-  PUBLISH_PATH: "./GunGameLite/GunGameLite"
   DOTNET_VERSION: "10.0.x"
 
 jobs:
@@ -97,13 +96,13 @@ jobs:
             ${{ env.OUTPUT_PATH }}/GunGameLite.deps.json \
             ${{ env.OUTPUT_PATH }}/GunGameLite.pdb
 
+      # The zip holds GunGameLite/GunGameLite.dll, so extracting it into the CSS plugins folder
+      # gives plugins/GunGameLite/GunGameLite.dll, the only layout CSS loads. Zipping
+      # ./GunGameLite/GunGameLite from the repo root nested it one level too deep.
       - name: Zip
         if: steps.exists.outputs.released == 'false'
-        uses: thedoctor0/zip-release@0.7.5
-        with:
-          type: 'zip'
-          filename: '${{ env.PROJECT_NAME }}.zip'
-          path: ${{ env.PUBLISH_PATH }}
+        working-directory: ./GunGameLite
+        run: zip -r ../${{ env.PROJECT_NAME }}.zip ${{ env.PROJECT_NAME }}
 
       - name: Create Release
         if: steps.exists.outputs.released == 'false'
@@ -120,7 +119,8 @@ jobs:
 
             ### Installation
             1. Download **`GunGameLite.zip`** below.
-            2. Extract it into `game/csgo/addons/counterstrikesharp/plugins/GunGameLite/` on your CS2 server.
-            3. Restart the server, or run `css_plugins reload GunGameLite` in the console.
+            2. Extract it into `game/csgo/addons/counterstrikesharp/plugins/` on your CS2 server, so you end up with `plugins/GunGameLite/GunGameLite.dll`.
+            3. Restart the server, or run `css_plugins load GunGameLite` in the console.
 
-            Requires [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp) v1.0.371+.
+            Requires [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp) v1.0.371+ and a server in Casual mode (`+game_type 0 +game_mode 0`).
+            See the [README](https://github.com/creazy231/cs2-css-gungame-lite#tested-with) for the CS2 / CounterStrikeSharp versions this release was tested with.
